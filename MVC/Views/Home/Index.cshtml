@@ -1,0 +1,74 @@
+﻿@model MVC.Models.FileModel
+@{
+    ViewBag.Title = "Home Page";
+}
+
+
+<div class="row">
+
+    @using (Html.BeginForm("UploadFiles", "Home", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="form-horizontal">
+            <hr />
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+            <div class="form-group">
+                @Html.LabelFor(model => model.files, htmlAttributes: new { @class = "control-label col-md-2" })
+                <div class="col-md-10">
+                    @Html.TextBoxFor(model => model.files, "", new { @type = "file", @multiple = "multiple" })
+                    @Html.ValidationMessageFor(model => model.files, "", new { @class = "text-danger" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-md-offset-2 col-md-10">
+                    <input type="submit" value="Upload" class="btn btn-primary" />
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-md-offset-2 col-md-10 text-success">
+                    @ViewBag.UploadStatus
+                </div>
+            </div>
+
+        </div>
+    }
+    <script src="~/Scripts/jquery-1.10.2.min.js"></script>
+    <script src="~/Scripts/jquery.validate.min.js"></script>
+    <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+
+</div>
+<div class="row">
+    <div class="col-md-8 col-md-offset-2">
+        @if (ViewBag.FirmData != null)
+        {
+            <table class="table table-striped">
+                <tr>
+                    <th></th>
+                    @foreach (var asset in ViewBag.FirmData.Assets)
+                    {
+                        <th>@asset.Value</th>
+                    }
+                </tr>
+                @foreach (var firm in ViewBag.FirmData.Firms)
+                {
+                    var tmpDic = ViewBag.FirmData.Relations[firm.Key];
+                    <tr>
+                        <td>@firm.Value</td>
+                        @foreach (var asset in ViewBag.FirmData.Assets)
+                        {
+                            if (tmpDic.ContainsKey(asset.Key))
+                            {
+                                <td>X</td>
+                            }
+                            else
+                            {
+                                <td></td>
+                            }
+                        }
+                    </tr>
+                }
+            </table>
+        }
+    </div>
+</div>
