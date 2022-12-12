@@ -1,10 +1,12 @@
-﻿using MVC.Models;
+﻿using Microsoft.Office.Interop.Excel;
+using MVC.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
+using System.Web.UI;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace MVC.Controllers
@@ -50,8 +52,16 @@ namespace MVC.Controllers
                     //Checking file is available to save.  
                     if (file != null)
                     {
-                        if (file.FileName.Contains("Firm Info")) firmInfos = getFile1(file);
-                        else if (file.FileName.Contains("Asset Class - Firm Map")) firmMaps = getFile2(file);
+                        if (file.FileName.Contains("Firm Info"))
+                        {
+                            if (Path.GetExtension(file.FileName).ToUpper().Equals(".TXT")) firmInfos = getFile1FromTxt(file);
+                            else if(Path.GetExtension(file.FileName).ToUpper().Equals(".XLSX") || Path.GetExtension(file.FileName).ToUpper().Equals(".CSV")) firmInfos = getFile1(file);
+                        }
+                        else if (file.FileName.Contains("Asset Class - Firm Map"))
+                        {
+                            if (Path.GetExtension(file.FileName).ToUpper().Equals(".TXT")) firmMaps = getFile2FromTxt(file);                            
+                            else if(Path.GetExtension(file.FileName).ToUpper().Equals(".XLSX") || Path.GetExtension(file.FileName).ToUpper().Equals(".CSV")) firmMaps = getFile2(file);
+                        }
                     }
 
                 }
@@ -83,7 +93,6 @@ namespace MVC.Controllers
                     firmData.Assets = assets;
                     firmData.Relations = relations;
                     ViewBag.FirmData = firmData;
-                    string requestSent = "<?xml version=\"1.0\" encoding=\"UTF - 8\" standalone=\"yes\"?><PaymentRequestCommand><ScheduleId>UAT_1</ScheduleId><ClientId>NIBSS_V2001</ClientId><DebitBankCode>044</DebitBankCode><DebitAccountNumber>0123456789</DebitAccountNumber></PaymentRequestCommand>";
                     TempData["message"] = "Upload was successful";                    
                     return View(nameof(Index));
 
@@ -91,7 +100,6 @@ namespace MVC.Controllers
                 else
                 {
                     TempData["message"] = "No file was uploaded";
-                    string request = "<?xml version=\"1.0\" encoding=\"UTF - 8\" standalone=\"yes\"?><PaymentRequestCommand><ScheduleId>UAT_1</ScheduleId><ClientId>NIBSS_V2001</ClientId><DebitBankCode>044</DebitBankCode><DebitAccountNumber>0123456789</DebitAccountNumber></PaymentRequestCommand>";
                     return View(nameof(Index));
                 }
             }
@@ -140,6 +148,54 @@ namespace MVC.Controllers
                 return null;
             }
         }
+        public List<FirmInfo> getFile1FromTxt(HttpPostedFileBase postedFile)
+        {
+            try
+            {
+                string path = Server.MapPath("~/Uploads/");
+                string filePath = string.Empty;
+                if (postedFile != null)
+                {
+                    if (!Directory.Exists(path))
+                    {
+                        Directory.CreateDirectory(path);
+                    }
+                    filePath = path + DateTime.Now.Ticks + "-" + Path.GetFileName(postedFile.FileName);
+                    postedFile.SaveAs(filePath);
+
+                    //read data from txt
+                    List<FirmInfo> firmInfos = new List<FirmInfo>();
+                    using (var reader = new StreamReader(filePath))
+                    {
+                        bool flag = false;
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            if (!flag)
+                            {
+                                flag = true;
+                                continue;
+                            }
+                            var temp = line.Split(',');
+                            FirmInfo firminfo = new FirmInfo();
+                            firminfo.FirmID = temp[0];
+                            firminfo.FirmName = temp[1];
+                            firmInfos.Add(firminfo);
+                        }
+                    }
+                    System.IO.File.Delete(filePath);
+                    return firmInfos;
+                }
+
+                return null;
+
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
+        }
+
         public List<FirmMap> getFile2(HttpPostedFileBase postedFile)
         {
             try
@@ -184,6 +240,56 @@ namespace MVC.Controllers
             }
         }
 
+        public List<FirmMap> getFile2FromTxt(HttpPostedFileBase postedFile)
+        {
+            try
+            {
+                string path = Server.MapPath("~/Uploads/");
+                string filePath = string.Empty;
+                if (postedFile != null)
+                {
+                    if (!Directory.Exists(path))
+                    {
+                        Directory.CreateDirectory(path);
+                    }
+                    filePath = path + DateTime.Now.Ticks + "-" + Path.GetFileName(postedFile.FileName);
+                    postedFile.SaveAs(filePath);
+
+                    //read data from txt
+                    List<FirmMap> firmMaps = new List<FirmMap>();
+                    using (var reader = new StreamReader(filePath))
+                    {
+                        bool flag = false;
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            if (!flag)
+                            {
+                                flag = true;
+                                continue;
+                            }
+                            var temp = line.Split(',');
+                            FirmMap firmMap = new FirmMap();
+                            firmMap.AssetClassID = temp[0];
+                            firmMap.AssetClassName = temp[1];
+                            firmMap.InterestedFirmsID = temp[2];
+                            firmMaps.Add(firmMap);
+                        }
+                    }
+
+
+                    System.IO.File.Delete(filePath);
+                    return firmMaps;
+                }
+
+                return null;
+
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
+        }
 
 
 
