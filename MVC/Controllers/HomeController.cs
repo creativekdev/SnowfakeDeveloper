@@ -7,6 +7,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.UI;
+using System.Xml.Linq;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace MVC.Controllers
@@ -93,13 +94,13 @@ namespace MVC.Controllers
                     firmData.Assets = assets;
                     firmData.Relations = relations;
                     ViewBag.FirmData = firmData;
-                    TempData["message"] = "Upload was successful";                    
                     return View(nameof(Index));
 
                 }
                 else
                 {
                     TempData["message"] = "No file was uploaded";
+                    ViewBag.Message = "Please select correct files";
                     return View(nameof(Index));
                 }
             }
