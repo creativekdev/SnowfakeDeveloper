@@ -13,6 +13,7 @@ using System.Xml.Linq;
 using Excel = Microsoft.Office.Interop.Excel;
 using static System.Net.Mime.MediaTypeNames;
 using System.Web.UI.WebControls;
+using ExcelDataReader;
 
 namespace MVC.Controllers
 {
@@ -125,61 +126,30 @@ namespace MVC.Controllers
                         Directory.CreateDirectory(path);
                     }
                     filePath = path + DateTime.Now.Ticks + "-" + Path.GetFileName(postedFile.FileName);
-                    //                   postedFile.SaveAs(filePath);
-
-
-                    //Coneection String by default empty
-                    string ConStr = filePath;
-                    //Extantion of the file upload control saving into ext because 
-                    //there are two types of extation .xls and .xlsx of excel 
-                    string ext = Path.GetExtension(filePath).ToLower();
-                    //saving the file inside the MyFolder of the server
                     postedFile.SaveAs(filePath);
-                    // Label1.Text = FileUpload1.FileName + "\'s Data showing into the GridView";
-                    //checking that extantion is .xls or .xlsx
-
-                    if (ext.Trim() == ".xls")
-                    {
-                        //connection string for that file which extantion is .xls
-                        ConStr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filePath + ";Extended Properties=\"Excel 8.0;HDR=Yes;IMEX=2\"";
-                    }
-                    else if (ext.Trim() == ".xlsx")
-                    {
-                        //connection string for that file which extantion is .xlsx
-                        ConStr = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" + filePath + ";Extended Properties=\"Excel 12.0;HDR=Yes;IMEX=2\"";
-                    }
-                    //making query
-                    string query = "SELECT * FROM [Sheet1$]";
-                    //Providing connection
-                    OleDbConnection conn = new OleDbConnection(ConStr);
-                    //checking that connection state is closed or not if closed the 
-                    //open the connection
-                    if (conn.State == ConnectionState.Closed)
-                    {
-                        conn.Open();
-                    }
-                    //create command object
-                    OleDbCommand cmd = new OleDbCommand(query, conn);
-                    // create a data adapter and get the data into dataadapter
-                    OleDbDataAdapter da = new OleDbDataAdapter(cmd);
-                    DataSet ds = new DataSet();
-                    //fill the excel data to data set
-                    da.Fill(ds);
                     List<FirmInfo> firmInfos = new List<FirmInfo>();
 
-                    if (ds.Tables != null && ds.Tables.Count > 0)
+                    using (var stream = System.IO.File.Open(filePath, FileMode.Open, FileAccess.Read))
                     {
-                        for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                        using (var reader = ExcelReaderFactory.CreateReader(stream))
                         {
-                            FirmInfo firminfo = new FirmInfo();
-                            firminfo.FirmID = ds.Tables[0].Rows[i][0].ToString();
-                            firminfo.FirmName = ds.Tables[0].Rows[i][1].ToString();
-                            firmInfos.Add(firminfo);
 
+                            Boolean isTitle = true;
+                            while (reader.Read()) //Each row of the file
+                            {
+                                if (isTitle)
+                                {
+                                    isTitle = false;
+                                    continue;
+                                }
+                                FirmInfo firminfo = new FirmInfo();
+                                firminfo.FirmID = reader.GetValue(0).ToString();
+                                firminfo.FirmName = reader.GetValue(1).ToString();
+                                firmInfos.Add(firminfo);
+                            }
                         }
                     }
 
-                    conn.Close();
                     System.IO.File.Delete(filePath);
                     return firmInfos;
 
@@ -254,63 +224,33 @@ namespace MVC.Controllers
                         Directory.CreateDirectory(path);
                     }
                     filePath = path + DateTime.Now.Ticks + "-" + Path.GetFileName(postedFile.FileName);
-                    //                   postedFile.SaveAs(filePath);
-
-
-                    //Coneection String by default empty
-                    string ConStr = filePath;
-                    //Extantion of the file upload control saving into ext because 
-                    //there are two types of extation .xls and .xlsx of excel 
-                    string ext = Path.GetExtension(filePath).ToLower();
-                    //saving the file inside the MyFolder of the server
                     postedFile.SaveAs(filePath);
-                    // Label1.Text = FileUpload1.FileName + "\'s Data showing into the GridView";
-                    //checking that extantion is .xls or .xlsx
-
-                    if (ext.Trim() == ".xls")
-                    {
-                        //connection string for that file which extantion is .xls
-                        ConStr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filePath + ";Extended Properties=\"Excel 8.0;HDR=Yes;IMEX=2\"";
-                    }
-                    else if (ext.Trim() == ".xlsx")
-                    {
-                        //connection string for that file which extantion is .xlsx
-                        ConStr = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" + filePath + ";Extended Properties=\"Excel 12.0;HDR=Yes;IMEX=2\"";
-                    }
-                    //making query
-                    string query = "SELECT * FROM [Sheet1$]";
-                    //Providing connection
-                    OleDbConnection conn = new OleDbConnection(ConStr);
-                    //checking that connection state is closed or not if closed the 
-                    //open the connection
-                    if (conn.State == ConnectionState.Closed)
-                    {
-                        conn.Open();
-                    }
-                    //create command object
-                    OleDbCommand cmd = new OleDbCommand(query, conn);
-                    // create a data adapter and get the data into dataadapter
-                    OleDbDataAdapter da = new OleDbDataAdapter(cmd);
-                    DataSet ds = new DataSet();
-                    //fill the excel data to data set
-                    da.Fill(ds);
                     List<FirmMap> firmMaps = new List<FirmMap>();
-                    if (ds.Tables != null && ds.Tables.Count > 0)
+                    using (var stream = System.IO.File.Open(filePath, FileMode.Open, FileAccess.Read))
                     {
-                        for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                        using (var reader = ExcelReaderFactory.CreateReader(stream))
                         {
-                            FirmMap firmMap = new FirmMap();
-                            firmMap.AssetClassID = ds.Tables[0].Rows[i][0].ToString();
-                            firmMap.AssetClassName = ds.Tables[0].Rows[i][1].ToString();
-                            firmMap.InterestedFirmsID = ds.Tables[0].Rows[i][2].ToString();
-                            firmMaps.Add(firmMap);
 
+                            Boolean isTitle = true;
+                            while (reader.Read()) //Each row of the file
+                            {
+                                if (isTitle)
+                                {
+                                    isTitle = false;
+                                    continue;
+                                }
+                                FirmMap firmMap = new FirmMap();
+                                firmMap.AssetClassID = reader.GetValue(0).ToString();
+                                firmMap.AssetClassName = reader.GetValue(1).ToString();
+                                firmMap.InterestedFirmsID = reader.GetValue(2).ToString();
+                                firmMaps.Add(firmMap);
+                            }
                         }
                     }
 
-                    conn.Close();
                     System.IO.File.Delete(filePath);
                     return firmMaps;
+
 
                 }
                 else return null;

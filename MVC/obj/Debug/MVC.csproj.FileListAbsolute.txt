@@ -77,3 +77,6 @@ G:\US_SachinS_FL\SnowfakeDeveloper\MVC\MVC\obj\Debug\MVC.csproj.CoreCompileInput
 G:\US_SachinS_FL\SnowfakeDeveloper\MVC\MVC\obj\Debug\MVC.csproj.CopyComplete
 G:\US_SachinS_FL\SnowfakeDeveloper\MVC\MVC\obj\Debug\MVC.dll
 G:\US_SachinS_FL\SnowfakeDeveloper\MVC\MVC\obj\Debug\MVC.pdb
+G:\US_SachinS_FL\SnowfakeDeveloper\MVC\MVC\bin\ExcelDataReader.dll
+G:\US_SachinS_FL\SnowfakeDeveloper\MVC\MVC\bin\ExcelDataReader.pdb
+G:\US_SachinS_FL\SnowfakeDeveloper\MVC\MVC\bin\ExcelDataReader.xml
