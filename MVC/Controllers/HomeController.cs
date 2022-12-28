@@ -2,6 +2,8 @@
 using MVC.Models;
 using System;
 using System.Collections.Generic;
+using System.Data.OleDb;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Web;
@@ -9,6 +11,8 @@ using System.Web.Mvc;
 using System.Web.UI;
 using System.Xml.Linq;
 using Excel = Microsoft.Office.Interop.Excel;
+using static System.Net.Mime.MediaTypeNames;
+using System.Web.UI.WebControls;
 
 namespace MVC.Controllers
 {
@@ -55,19 +59,19 @@ namespace MVC.Controllers
                     {
                         if (file.FileName.Contains("Firm Info"))
                         {
-                            if (Path.GetExtension(file.FileName).ToUpper().Equals(".TXT")) firmInfos = getFile1FromTxt(file);
-                            else if(Path.GetExtension(file.FileName).ToUpper().Equals(".XLSX") || Path.GetExtension(file.FileName).ToUpper().Equals(".CSV")) firmInfos = getFile1(file);
+                            if (Path.GetExtension(file.FileName).ToUpper().Equals(".TXT") || Path.GetExtension(file.FileName).ToUpper().Equals(".CSV")) firmInfos = getFile1FromTxt(file);
+                            else if(Path.GetExtension(file.FileName).ToUpper().Equals(".XLSX") || Path.GetExtension(file.FileName).ToUpper().Equals(".XLS")) firmInfos = getFile1(file);
                         }
                         else if (file.FileName.Contains("Asset Class - Firm Map"))
                         {
-                            if (Path.GetExtension(file.FileName).ToUpper().Equals(".TXT")) firmMaps = getFile2FromTxt(file);                            
-                            else if(Path.GetExtension(file.FileName).ToUpper().Equals(".XLSX") || Path.GetExtension(file.FileName).ToUpper().Equals(".CSV")) firmMaps = getFile2(file);
+                            if (Path.GetExtension(file.FileName).ToUpper().Equals(".TXT") || Path.GetExtension(file.FileName).ToUpper().Equals(".CSV")) firmMaps = getFile2FromTxt(file);                            
+                            else if(Path.GetExtension(file.FileName).ToUpper().Equals(".XLSX") || Path.GetExtension(file.FileName).ToUpper().Equals(".XLS")) firmMaps = getFile2(file);
                         }
                     }
 
                 }
 
-                if (firmInfos.Count > 0 && firmMaps.Count > 0)
+                if (firmInfos != null && firmMaps != null && firmInfos.Count > 0 && firmMaps.Count > 0)
                 {
                     Dictionary<string, string> firms = new Dictionary<string, string>();
                     Dictionary<string, string> assets = new Dictionary<string, string>();
@@ -113,6 +117,7 @@ namespace MVC.Controllers
             {
                 string path = Server.MapPath("~/Uploads/");
                 string filePath = string.Empty;
+
                 if (postedFile != null)
                 {
                     if (!Directory.Exists(path))
@@ -120,29 +125,66 @@ namespace MVC.Controllers
                         Directory.CreateDirectory(path);
                     }
                     filePath = path + DateTime.Now.Ticks + "-" + Path.GetFileName(postedFile.FileName);
+                    //                   postedFile.SaveAs(filePath);
+
+
+                    //Coneection String by default empty
+                    string ConStr = filePath;
+                    //Extantion of the file upload control saving into ext because 
+                    //there are two types of extation .xls and .xlsx of excel 
+                    string ext = Path.GetExtension(filePath).ToLower();
+                    //saving the file inside the MyFolder of the server
                     postedFile.SaveAs(filePath);
+                    // Label1.Text = FileUpload1.FileName + "\'s Data showing into the GridView";
+                    //checking that extantion is .xls or .xlsx
 
-                    //read data from excel
-                    Excel.Application application = new Excel.Application();
-                    Excel.Workbook workbook = application.Workbooks.Open(filePath);
-                    Excel.Worksheet worksheet = workbook.ActiveSheet;
-                    Excel.Range range = worksheet.UsedRange;
-
-                    List<FirmInfo> firmInfos = new List<FirmInfo>();
-                    for (int row = 2; row <= range.Rows.Count; row++)
+                    if (ext.Trim() == ".xls")
                     {
-                        FirmInfo firminfo = new FirmInfo();
-                        firminfo.FirmID = ((Excel.Range)range.Cells[row, 1]).Text;
-                        firminfo.FirmName = ((Excel.Range)range.Cells[row, 2]).Text;
-                        firmInfos.Add(firminfo);
+                        //connection string for that file which extantion is .xls
+                        ConStr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filePath + ";Extended Properties=\"Excel 8.0;HDR=Yes;IMEX=2\"";
                     }
-                    workbook.Close();
+                    else if (ext.Trim() == ".xlsx")
+                    {
+                        //connection string for that file which extantion is .xlsx
+                        ConStr = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" + filePath + ";Extended Properties=\"Excel 12.0;HDR=Yes;IMEX=2\"";
+                    }
+                    //making query
+                    string query = "SELECT * FROM [Sheet1$]";
+                    //Providing connection
+                    OleDbConnection conn = new OleDbConnection(ConStr);
+                    //checking that connection state is closed or not if closed the 
+                    //open the connection
+                    if (conn.State == ConnectionState.Closed)
+                    {
+                        conn.Open();
+                    }
+                    //create command object
+                    OleDbCommand cmd = new OleDbCommand(query, conn);
+                    // create a data adapter and get the data into dataadapter
+                    OleDbDataAdapter da = new OleDbDataAdapter(cmd);
+                    DataSet ds = new DataSet();
+                    //fill the excel data to data set
+                    da.Fill(ds);
+                    List<FirmInfo> firmInfos = new List<FirmInfo>();
+
+                    if (ds.Tables != null && ds.Tables.Count > 0)
+                    {
+                        for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                        {
+                            FirmInfo firminfo = new FirmInfo();
+                            firminfo.FirmID = ds.Tables[0].Rows[i][0].ToString();
+                            firminfo.FirmName = ds.Tables[0].Rows[i][1].ToString();
+                            firmInfos.Add(firminfo);
+
+                        }
+                    }
+
+                    conn.Close();
                     System.IO.File.Delete(filePath);
                     return firmInfos;
+
                 }
-
-                return null;
-
+                else return null;
             }
             catch (Exception e)
             {
@@ -199,10 +241,12 @@ namespace MVC.Controllers
 
         public List<FirmMap> getFile2(HttpPostedFileBase postedFile)
         {
+          
             try
             {
                 string path = Server.MapPath("~/Uploads/");
                 string filePath = string.Empty;
+
                 if (postedFile != null)
                 {
                     if (!Directory.Exists(path))
@@ -210,30 +254,66 @@ namespace MVC.Controllers
                         Directory.CreateDirectory(path);
                     }
                     filePath = path + DateTime.Now.Ticks + "-" + Path.GetFileName(postedFile.FileName);
+                    //                   postedFile.SaveAs(filePath);
+
+
+                    //Coneection String by default empty
+                    string ConStr = filePath;
+                    //Extantion of the file upload control saving into ext because 
+                    //there are two types of extation .xls and .xlsx of excel 
+                    string ext = Path.GetExtension(filePath).ToLower();
+                    //saving the file inside the MyFolder of the server
                     postedFile.SaveAs(filePath);
+                    // Label1.Text = FileUpload1.FileName + "\'s Data showing into the GridView";
+                    //checking that extantion is .xls or .xlsx
 
-                    //read data from excel
-                    Excel.Application application = new Excel.Application();
-                    Excel.Workbook workbook = application.Workbooks.Open(filePath);
-                    Excel.Worksheet worksheet = workbook.ActiveSheet;
-                    Excel.Range range = worksheet.UsedRange;
-
-                    List<FirmMap> firmMaps = new List<FirmMap>();
-                    for (int row = 2; row <= range.Rows.Count; row++)
+                    if (ext.Trim() == ".xls")
                     {
-                        FirmMap firmMap = new FirmMap();
-                        firmMap.AssetClassID = ((Excel.Range)range.Cells[row, 1]).Text;
-                        firmMap.AssetClassName = ((Excel.Range)range.Cells[row, 2]).Text;
-                        firmMap.InterestedFirmsID = ((Excel.Range)range.Cells[row, 3]).Text;
-                        firmMaps.Add(firmMap);
+                        //connection string for that file which extantion is .xls
+                        ConStr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filePath + ";Extended Properties=\"Excel 8.0;HDR=Yes;IMEX=2\"";
                     }
-                    workbook.Close();
+                    else if (ext.Trim() == ".xlsx")
+                    {
+                        //connection string for that file which extantion is .xlsx
+                        ConStr = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" + filePath + ";Extended Properties=\"Excel 12.0;HDR=Yes;IMEX=2\"";
+                    }
+                    //making query
+                    string query = "SELECT * FROM [Sheet1$]";
+                    //Providing connection
+                    OleDbConnection conn = new OleDbConnection(ConStr);
+                    //checking that connection state is closed or not if closed the 
+                    //open the connection
+                    if (conn.State == ConnectionState.Closed)
+                    {
+                        conn.Open();
+                    }
+                    //create command object
+                    OleDbCommand cmd = new OleDbCommand(query, conn);
+                    // create a data adapter and get the data into dataadapter
+                    OleDbDataAdapter da = new OleDbDataAdapter(cmd);
+                    DataSet ds = new DataSet();
+                    //fill the excel data to data set
+                    da.Fill(ds);
+                    List<FirmMap> firmMaps = new List<FirmMap>();
+                    if (ds.Tables != null && ds.Tables.Count > 0)
+                    {
+                        for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                        {
+                            FirmMap firmMap = new FirmMap();
+                            firmMap.AssetClassID = ds.Tables[0].Rows[i][0].ToString();
+                            firmMap.AssetClassName = ds.Tables[0].Rows[i][1].ToString();
+                            firmMap.InterestedFirmsID = ds.Tables[0].Rows[i][2].ToString();
+                            firmMaps.Add(firmMap);
+
+                        }
+                    }
+
+                    conn.Close();
                     System.IO.File.Delete(filePath);
                     return firmMaps;
+
                 }
-
-                return null;
-
+                else return null;
             }
             catch (Exception e)
             {
